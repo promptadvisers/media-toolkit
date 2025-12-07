@@ -1300,6 +1300,96 @@ body {
     border-radius: var(--radius-sm);
 }
 
+/* ============================================
+   Video Compression Styles
+   ============================================ */
+
+/* Compress Tabs */
+.compress-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.compress-tab {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.compress-tab:hover {
+    color: var(--text-primary);
+    background: var(--surface-hover);
+}
+
+.compress-tab.active {
+    color: var(--primary);
+    background: var(--primary-light);
+    font-weight: 500;
+}
+
+.compress-tab-panel {
+    animation: fadeIn 0.2s ease;
+}
+
+/* Compress Option Buttons */
+.compress-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.compress-opt-btn {
+    padding: 0.5rem 1rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.compress-opt-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-light);
+    color: var(--text-primary);
+}
+
+.compress-opt-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+/* Compression Estimate */
+.compress-estimate {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--primary-light);
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-md);
+}
+
+.compress-estimate p {
+    margin: 0.25rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.compress-estimate strong {
+    color: var(--text-primary);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .app-container {
@@ -1316,5 +1406,14 @@ body {
 
     .feature-card {
         padding: 1.5rem;
+    }
+
+    .compress-tabs {
+        flex-wrap: wrap;
+    }
+
+    .compress-tab {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
     }
 }

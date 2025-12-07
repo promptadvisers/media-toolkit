@@ -19,6 +19,12 @@ from app.services.video_service import (
     split_video_direct,
     get_part_info,
     VIDEO_EXTENSIONS,
+    QUALITY_PRESETS,
+    RESOLUTION_PRESETS,
+    compress_video_target_size,
+    compress_video_quality,
+    compress_video_resolution,
+    estimate_compressed_size,
 )
 
 router = APIRouter()
@@ -33,6 +39,37 @@ class LocalFileRequest(BaseModel):
 class VideoInfoRequest(BaseModel):
     """Request model for video info"""
     file_path: str
+
+
+class CompressTargetSizeRequest(BaseModel):
+    """Request for target size compression"""
+    file_path: str
+    target_size_mb: float  # e.g., 900 for 900MB
+    output_path: Optional[str] = None
+
+
+class CompressQualityRequest(BaseModel):
+    """Request for quality-based compression"""
+    file_path: str
+    quality: str = 'medium'  # 'low', 'medium', 'high'
+    output_path: Optional[str] = None
+
+
+class CompressResolutionRequest(BaseModel):
+    """Request for resolution-based compression"""
+    file_path: str
+    resolution: str  # '720p', '1080p', '480p', etc.
+    quality: str = 'medium'
+    output_path: Optional[str] = None
+
+
+class EstimateRequest(BaseModel):
+    """Request for compression estimate"""
+    file_path: str
+    mode: str  # 'target_size', 'quality', 'resolution'
+    target_size_mb: Optional[float] = None
+    quality: Optional[str] = None
+    resolution: Optional[str] = None
 
 
 def validate_video_path(file_path: str) -> Path:
@@ -235,3 +272,139 @@ async def preview_split_local(request: LocalFileRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Could not analyze video: {str(e)}")
+
+
+# ============================================
+# Video Compression Endpoints
+# ============================================
+
+@router.post("/compress/target-size")
+async def compress_target_size_local(request: CompressTargetSizeRequest):
+    """
+    Compress a local video to a target file size.
+    Uses two-pass encoding for accurate size targeting.
+    """
+    path = validate_video_path(request.file_path)
+
+    try:
+        output_file = compress_video_target_size(
+            str(path),
+            request.target_size_mb,
+            request.output_path
+        )
+        output_size = Path(output_file).stat().st_size
+        original_size = path.stat().st_size
+
+        return {
+            "success": True,
+            "message": f"Compressed to {output_size / 1024 / 1024:.1f} MB",
+            "output_file": output_file,
+            "original_size": original_size,
+            "compressed_size": output_size,
+            "reduction_percent": round((1 - output_size / original_size) * 100, 1),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Compression failed: {str(e)}")
+
+
+@router.post("/compress/quality")
+async def compress_quality_local(request: CompressQualityRequest):
+    """
+    Compress a local video using quality presets.
+    Options: 'low', 'medium', 'high'
+    """
+    path = validate_video_path(request.file_path)
+
+    try:
+        output_file = compress_video_quality(
+            str(path),
+            request.quality,
+            request.output_path
+        )
+        output_size = Path(output_file).stat().st_size
+        original_size = path.stat().st_size
+
+        return {
+            "success": True,
+            "message": f"Compressed to {output_size / 1024 / 1024:.1f} MB",
+            "output_file": output_file,
+            "original_size": original_size,
+            "compressed_size": output_size,
+            "reduction_percent": round((1 - output_size / original_size) * 100, 1),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Compression failed: {str(e)}")
+
+
+@router.post("/compress/resolution")
+async def compress_resolution_local(request: CompressResolutionRequest):
+    """
+    Compress a local video by downscaling resolution.
+    Options: '2160p', '1440p', '1080p', '720p', '480p', '360p'
+    """
+    path = validate_video_path(request.file_path)
+
+    try:
+        output_file = compress_video_resolution(
+            str(path),
+            request.resolution,
+            request.quality,
+            request.output_path
+        )
+        output_size = Path(output_file).stat().st_size
+        original_size = path.stat().st_size
+
+        return {
+            "success": True,
+            "message": f"Compressed to {output_size / 1024 / 1024:.1f} MB",
+            "output_file": output_file,
+            "original_size": original_size,
+            "compressed_size": output_size,
+            "reduction_percent": round((1 - output_size / original_size) * 100, 1),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Compression failed: {str(e)}")
+
+
+@router.post("/compress/estimate")
+async def estimate_compression(request: EstimateRequest):
+    """
+    Estimate compressed file size before processing.
+    Useful for UI preview.
+    """
+    path = validate_video_path(request.file_path)
+
+    try:
+        estimate = estimate_compressed_size(
+            str(path),
+            request.mode,
+            target_size_mb=request.target_size_mb,
+            quality=request.quality,
+            resolution=request.resolution
+        )
+        return estimate
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/compress/options")
+async def get_compression_options():
+    """
+    Get available compression options (quality presets, resolutions).
+    """
+    return {
+        "quality_presets": list(QUALITY_PRESETS.keys()),
+        "resolutions": list(RESOLUTION_PRESETS.keys()),
+    }

@@ -1,6 +1,6 @@
 """
-Video Splitting Service
-Handles splitting videos into equal parts using FFmpeg
+Video Processing Service
+Handles splitting videos into equal parts and compression using FFmpeg
 """
 
 import subprocess
@@ -14,6 +14,23 @@ from pathlib import Path
 
 # Supported video extensions
 VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.avi', '.mov', '.webm', '.flv', '.wmv', '.m4v', '.mpeg', '.mpg', '.3gp'}
+
+# Quality preset CRF values (lower = higher quality, larger file)
+QUALITY_PRESETS = {
+    'high': {'crf': 18, 'audio_bitrate': '192k', 'preset': 'slow'},
+    'medium': {'crf': 23, 'audio_bitrate': '128k', 'preset': 'medium'},
+    'low': {'crf': 28, 'audio_bitrate': '96k', 'preset': 'fast'},
+}
+
+# Resolution presets (height values, width calculated to maintain aspect ratio)
+RESOLUTION_PRESETS = {
+    '2160p': 2160,
+    '1440p': 1440,
+    '1080p': 1080,
+    '720p': 720,
+    '480p': 480,
+    '360p': 360,
+}
 
 
 def get_video_duration(video_path: str) -> float:
@@ -314,3 +331,230 @@ def get_part_info(duration: float, num_parts: int) -> list[dict]:
         })
 
     return parts
+
+
+# ============================================
+# Video Compression Functions
+# ============================================
+
+def calculate_target_bitrate(target_size_mb: float, duration_seconds: float, audio_bitrate_kbps: int = 128) -> int:
+    """
+    Calculate target video bitrate to achieve desired file size.
+
+    Formula: video_bitrate = (target_size_bytes * 8 / duration_seconds) - audio_bitrate
+
+    Returns bitrate in kbps
+    """
+    target_size_bytes = target_size_mb * 1024 * 1024
+    total_bitrate_bps = (target_size_bytes * 8) / duration_seconds
+    video_bitrate_kbps = int((total_bitrate_bps / 1000) - audio_bitrate_kbps)
+
+    # Minimum viable video bitrate (500 kbps)
+    return max(video_bitrate_kbps, 500)
+
+
+def compress_video_target_size(
+    video_path: str,
+    target_size_mb: float,
+    output_path: str = None
+) -> str:
+    """
+    Compress video to target file size using two-pass encoding.
+
+    Uses libx264 for video and aac for audio.
+    Two-pass encoding provides better quality distribution.
+    """
+    # Get video info
+    info = get_video_info(video_path)
+    duration = info['duration']
+
+    if duration <= 0:
+        raise ValueError("Could not determine video duration")
+
+    # Calculate bitrates
+    audio_bitrate = 128  # kbps
+    video_bitrate = calculate_target_bitrate(target_size_mb, duration, audio_bitrate)
+
+    # Prepare output path
+    path = Path(video_path)
+    if output_path is None:
+        output_path = str(path.parent / f"{path.stem}_compressed{path.suffix}")
+
+    # Create temp directory for pass log files
+    temp_dir = tempfile.mkdtemp()
+    passlog_prefix = os.path.join(temp_dir, 'ffmpeg2pass')
+
+    try:
+        # Pass 1: Analysis
+        pass1_cmd = [
+            'ffmpeg', '-y',
+            '-i', video_path,
+            '-c:v', 'libx264',
+            '-b:v', f'{video_bitrate}k',
+            '-pass', '1',
+            '-passlogfile', passlog_prefix,
+            '-an',  # No audio in first pass
+            '-f', 'null',
+            '/dev/null'
+        ]
+
+        result = subprocess.run(pass1_cmd, capture_output=True, text=True, timeout=3600)
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg pass 1 failed: {result.stderr}")
+
+        # Pass 2: Encoding
+        pass2_cmd = [
+            'ffmpeg', '-y',
+            '-i', video_path,
+            '-c:v', 'libx264',
+            '-b:v', f'{video_bitrate}k',
+            '-pass', '2',
+            '-passlogfile', passlog_prefix,
+            '-c:a', 'aac',
+            '-b:a', f'{audio_bitrate}k',
+            output_path
+        ]
+
+        result = subprocess.run(pass2_cmd, capture_output=True, text=True, timeout=3600)
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg pass 2 failed: {result.stderr}")
+
+        return output_path
+
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Video compression timed out")
+    finally:
+        # Clean up temp directory
+        import shutil
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+def compress_video_quality(
+    video_path: str,
+    quality: str = 'medium',
+    output_path: str = None
+) -> str:
+    """
+    Compress video using quality preset (CRF-based encoding).
+
+    Quality options: 'high' (CRF 18), 'medium' (CRF 23), 'low' (CRF 28)
+    """
+    if quality not in QUALITY_PRESETS:
+        quality = 'medium'
+
+    preset = QUALITY_PRESETS[quality]
+
+    path = Path(video_path)
+    if output_path is None:
+        output_path = str(path.parent / f"{path.stem}_{quality}{path.suffix}")
+
+    cmd = [
+        'ffmpeg', '-y',
+        '-i', video_path,
+        '-c:v', 'libx264',
+        '-crf', str(preset['crf']),
+        '-preset', preset['preset'],
+        '-c:a', 'aac',
+        '-b:a', preset['audio_bitrate'],
+        output_path
+    ]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg compression failed: {result.stderr}")
+        return output_path
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Video compression timed out")
+
+
+def compress_video_resolution(
+    video_path: str,
+    target_resolution: str,
+    quality: str = 'medium',
+    output_path: str = None
+) -> str:
+    """
+    Compress video by downscaling resolution.
+
+    Uses scale filter to maintain aspect ratio.
+    Combines with CRF encoding for quality control.
+    """
+    if target_resolution not in RESOLUTION_PRESETS:
+        raise ValueError(f"Invalid resolution. Options: {list(RESOLUTION_PRESETS.keys())}")
+
+    target_height = RESOLUTION_PRESETS[target_resolution]
+    preset = QUALITY_PRESETS.get(quality, QUALITY_PRESETS['medium'])
+
+    path = Path(video_path)
+    if output_path is None:
+        output_path = str(path.parent / f"{path.stem}_{target_resolution}{path.suffix}")
+
+    # Scale filter: -2 ensures width is divisible by 2 (required by h264)
+    cmd = [
+        'ffmpeg', '-y',
+        '-i', video_path,
+        '-vf', f'scale=-2:{target_height}',
+        '-c:v', 'libx264',
+        '-crf', str(preset['crf']),
+        '-preset', preset['preset'],
+        '-c:a', 'aac',
+        '-b:a', preset['audio_bitrate'],
+        output_path
+    ]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg compression failed: {result.stderr}")
+        return output_path
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Video compression timed out")
+
+
+def estimate_compressed_size(
+    video_path: str,
+    mode: str,
+    target_size_mb: float = None,
+    quality: str = None,
+    resolution: str = None
+) -> dict:
+    """
+    Estimate the output file size for given compression settings.
+    Returns estimate info for UI display.
+    """
+    info = get_video_info(video_path)
+    original_size_mb = info['file_size'] / 1024 / 1024
+
+    # Calculate based on mode
+    if mode == 'target_size' and target_size_mb:
+        estimated_size = target_size_mb
+        reduction = (1 - target_size_mb / original_size_mb) * 100
+    elif mode == 'quality':
+        # Rough estimates based on CRF
+        crf_ratios = {'high': 0.7, 'medium': 0.4, 'low': 0.2}
+        ratio = crf_ratios.get(quality, 0.4)
+        estimated_size = original_size_mb * ratio
+        reduction = (1 - ratio) * 100
+    elif mode == 'resolution' and resolution in RESOLUTION_PRESETS:
+        # Estimate based on pixel ratio
+        current_pixels = info['width'] * info['height']
+        target_height = RESOLUTION_PRESETS[resolution]
+        # Maintain aspect ratio
+        target_width = int(info['width'] * (target_height / info['height']))
+        target_pixels = target_width * target_height
+        pixel_ratio = target_pixels / current_pixels if current_pixels > 0 else 1
+        # Additional compression from encoding
+        crf_ratios = {'high': 0.8, 'medium': 0.6, 'low': 0.4}
+        quality_factor = crf_ratios.get(quality, 0.6)
+        estimated_size = original_size_mb * pixel_ratio * quality_factor
+        reduction = (1 - (pixel_ratio * quality_factor)) * 100
+    else:
+        estimated_size = original_size_mb * 0.4
+        reduction = 60
+
+    return {
+        'original_size_mb': round(original_size_mb, 2),
+        'estimated_size_mb': round(max(estimated_size, 1), 2),
+        'estimated_reduction_percent': round(max(0, min(reduction, 99)), 1),
+    }
