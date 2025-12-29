@@ -1390,6 +1390,116 @@ body {
     color: var(--text-primary);
 }
 
+/* ============================================
+   Image Blur Tool Styles
+   ============================================ */
+
+/* Blur Controls Container */
+.blur-controls {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Blur Toolbar */
+.blur-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: flex-end;
+    padding: 1rem;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+}
+
+.blur-toolbar-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.blur-toolbar-group .form-label {
+    margin-bottom: 0;
+}
+
+.blur-toolbar-group .quality-slider {
+    width: 150px;
+}
+
+.blur-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+    margin-left: auto;
+}
+
+.blur-count {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+}
+
+/* Blur Canvas Container */
+.blur-canvas-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    height: 480px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+}
+
+.blur-canvas-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.blur-canvas-wrapper canvas {
+    display: block;
+    cursor: crosshair;
+    border-radius: var(--radius-sm);
+}
+
+#blur-selection-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+/* Blur Instructions */
+.blur-instructions {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .blur-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .blur-toolbar-group .quality-slider {
+        width: 100%;
+    }
+
+    .blur-actions {
+        margin-left: 0;
+        justify-content: space-between;
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .app-container {

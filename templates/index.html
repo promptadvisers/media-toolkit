@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Media Toolkit</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
@@ -86,6 +87,18 @@
                 </div>
                 <h2>AI Image Editor</h2>
                 <p>Generate & edit images with AI</p>
+            </button>
+
+            <button class="feature-card" data-feature="image-blur">
+                <div class="card-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" opacity="0.3"></circle>
+                        <circle cx="12" cy="12" r="6" opacity="0.5"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                    </svg>
+                </div>
+                <h2>Image Blur</h2>
+                <p>Blur sensitive areas in images</p>
             </button>
         </main>
 
@@ -837,6 +850,84 @@
                 </div>
             </div>
         </section>
+
+        <!-- Image Blur Panel -->
+        <section id="image-blur-panel" class="feature-panel hidden">
+            <div class="panel-header">
+                <button class="back-btn" onclick="showMainMenu()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Back
+                </button>
+                <h2>Image Blur</h2>
+            </div>
+            <div class="panel-content">
+                <!-- Drop Zone -->
+                <div id="blur-drop-zone" class="drop-zone">
+                    <input type="file" id="blur-file-input" accept=".png,.jpg,.jpeg,.webp,.gif,.bmp" hidden>
+                    <div class="drop-zone-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </div>
+                    <p class="drop-zone-text">Drag & drop an image here</p>
+                    <p class="drop-zone-hint">or click to browse, or paste from clipboard (Cmd/Ctrl+V)</p>
+                </div>
+
+                <!-- Blur Controls -->
+                <div id="blur-controls" class="blur-controls hidden">
+                    <div class="blur-toolbar">
+                        <div class="blur-toolbar-group">
+                            <label class="form-label">Shape:</label>
+                            <div class="format-buttons">
+                                <button class="format-btn blur-shape-btn active" data-shape="rectangle">Rectangle</button>
+                                <button class="format-btn blur-shape-btn" data-shape="ellipse">Ellipse</button>
+                            </div>
+                        </div>
+
+                        <div class="blur-toolbar-group">
+                            <label class="form-label">Blur Intensity: <span id="blur-intensity-value">15</span>px</label>
+                            <input type="range" id="blur-intensity-slider" class="quality-slider" min="5" max="50" value="15">
+                        </div>
+
+                        <div class="blur-toolbar-group blur-actions">
+                            <button id="blur-undo-btn" class="btn btn-secondary" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="1 4 1 10 7 10"></polyline>
+                                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                                </svg>
+                                Undo
+                            </button>
+                            <span id="blur-count" class="blur-count">0 blurs</span>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="blur-canvas-container">
+                        <div class="blur-canvas-wrapper">
+                            <canvas id="blur-main-canvas"></canvas>
+                            <canvas id="blur-selection-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <p class="blur-instructions">Click and drag on the image to create blur regions</p>
+
+                    <!-- Download Button -->
+                    <button id="blur-download-btn" class="btn btn-primary btn-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Blurred Image
+                    </button>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script src="/static/js/main.js"></script>
@@ -846,5 +937,6 @@
     <script src="/static/js/video.js"></script>
     <script src="/static/js/compress.js"></script>
     <script src="/static/js/ai-image.js"></script>
+    <script src="/static/js/blur.js"></script>
 </body>
 </html>

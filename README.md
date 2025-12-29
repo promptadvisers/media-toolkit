@@ -11,9 +11,11 @@ A sleek, local web application for media processing - your personal Swiss Army k
 | Feature | Description |
 |---------|-------------|
 | **Image Conversion** | Convert between PNG, JPG, WEBP, GIF, BMP, TIFF, HEIC formats with quality control |
+| **Image Blur** | Blur sensitive areas in images with rectangle/ellipse shapes and adjustable intensity |
 | **PDF Tools** | Merge multiple PDFs or split/extract specific pages |
 | **Audio Extraction** | Extract audio from videos (MP3, AAC, WAV, FLAC, OGG) with bitrate options |
 | **Video Splitting** | Split videos into N equal parts using FFmpeg |
+| **Video Compression** | Compress videos by target size, quality preset, or resolution |
 | **AI Image Editor** | Generate and edit images using Google's Gemini 3 Pro (Nano Banana) |
 
 ## Architecture
@@ -148,14 +150,17 @@ media-toolkit/
 │       ├── video_service.py    # FFmpeg video splitting
 │       └── ai_image_service.py # Gemini API integration
 ├── static/
+│   ├── favicon.svg          # App favicon
 │   ├── css/
 │   │   └── styles.css       # Dark theme styles
 │   └── js/
 │       ├── main.js          # Navigation & utilities
 │       ├── image.js         # Image conversion UI
+│       ├── blur.js          # Image blur tool UI
 │       ├── pdf.js           # PDF tools UI
 │       ├── audio.js         # Audio extraction UI
 │       ├── video.js         # Video splitting UI
+│       ├── compress.js      # Video compression UI
 │       └── ai-image.js      # AI image editor UI
 ├── templates/
 │   └── index.html           # Single-page application
